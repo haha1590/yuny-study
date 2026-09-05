@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>유니-스터디 | 상윤이 & 엄마의 매일 학습 체크룸</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Noto Sans KR -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Canvas Confetti for Celebration -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .custom-checkbox {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    @keyframes subtle-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+    }
+    .animate-subtle {
+      animation: subtle-pulse 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen pb-16">
+
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm">
+    <div class="max-w-3xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center space-x-2.5">
+        <span class="text-2xl">📝</span>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <h1 class="text-lg font-extrabold text-slate-900 leading-tight">유니-스터디</h1>
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">매일 체크룸</span>
+          </div>
+          <p class="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="sync-status">김해 ↔ 마산 실시간 연결 중</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Role Switcher -->
+      <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+        <button id="btn-mode-sangyun" onclick="switchRole('sangyun')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm bg-white text-indigo-700">
+          <span>🧑‍🎓</span> 상윤이 모드
+        </button>
+        <button id="btn-mode-mom" onclick="switchRole('mom')" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 transition-all flex items-center gap-1.5">
+          <span>👩‍👧</span> 엄마 모드
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- Date Selector Section -->
+    <section class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <button onclick="changeDate(-1)" class="p-2 rounded-xl hover:bg-slate-100 text-slate-600 active:scale-95 transition" title="어제">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <input type="date" id="current-date-input" onchange="onDateInputChange(this.value)" class="text-base font-bold text-slate-800 border border-slate-300 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 cursor-pointer">
+        <button onclick="changeDate(1)" class="p-2 rounded-xl hover:bg-slate-100 text-slate-600 active:scale-95 transition" title="내일">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button onclick="setToday()" class="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-semibold px-3 py-1.5 rounded-xl border border-indigo-200 transition">
+          오늘로 이동
+        </button>
+        <button onclick="copySummaryText()" class="text-xs bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold px-3 py-1.5 rounded-xl border border-slate-300 transition flex items-center gap-1" title="카톡으로 내용 복사">
+          <span>📋</span> 카톡 복사
+        </button>
+      </div>
+    </section>
+
+    <section id="notice-banner" class="rounded-2xl p-5 border transition-all duration-300 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 shadow-sm relative overflow-hidden">
+      <div class="relative z-10">
+        <div class="flex items-center justify-between mb-2">
+          <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-200/80 text-amber-900">
+            <span>📢</span> 엄마의 오늘의 공지 & 응원
+          </span>
+          <span id="d-day-tag" class="text-xs font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-md">
+            🔥 D-7 집중 기간!
+          </span>
+        </div>
+        <p id="mom-notice-text" class="text-base font-semibold text-slate-800 leading-relaxed whitespace-pre-line">
+          이제 일주일 남았어요! 서술형 쓰기에 집중합시다. 차근차근 힘내자 상윤아!
+        </p>
+      </div>
+
+      <!-- Edit Notice Button (Mom only) -->
+      <div id="mom-notice-edit-btn" class="mt-3 hidden">
+        <button onclick="openEditNoticeModal()" class="text-xs font-semibold text-amber-800 hover:text-amber-950 underline flex items-center gap-1">
+          ✏️ 공지 및 응원 문구 수정하기
+        </button>
+      </div>
+    </section>
+
+    <section class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+      <div class="flex items-center justify-between mb-2.5">
+        <div>
+          <h2 class="text-sm font-bold text-slate-700">오늘의 학습 달성도</h2>
+          <p class="text-xs text-slate-500" id="progress-text">과제를 확인하고 있어요</p>
+        </div>
+        <div class="text-right">
+          <span id="progress-percent" class="text-2xl font-extrabold text-indigo-600">0%</span>
+        </div>
+      </div>
+      <div class="w-full bg-slate-100 rounded-full h-3.5 overflow-hidden p-0.5 border border-slate-200">
+        <div id="progress-bar" class="bg-gradient-to-r from-indigo-500 to-emerald-500 h-full rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+      </div>
+    </section>
+
+    <!-- Mom View Alert: Sangyun Submission Notification -->
+    <section id="mom-submission-alert" class="hidden rounded-2xl p-5 border-2 border-emerald-400 bg-gradient-to-r from-emerald-50 to-teal-50 shadow-md">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-start gap-3">
+          <span class="text-3xl">📬</span>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h3 class="text-base font-bold text-emerald-950">상윤이가 오늘의 과제를 제출했습니다!</h3>
+              <span id="alert-submitted-time" class="text-xs bg-emerald-200 text-emerald-800 font-bold px-2 py-0.5 rounded-full"></span>
+            </div>
+            <p id="alert-submitted-summary" class="text-xs text-emerald-800 mt-1">모든 과제가 완료되었습니다. 작성한 소감을 확인해보세요.</p>
+          </div>
+        </div>
+        <!-- Mom Praise Stamp Button -->
+        <button onclick="stampPraise()" class="px-3.5 py-2 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white rounded-xl text-xs font-bold shadow transition active:scale-95 flex items-center gap-1.5 flex-shrink-0">
+          <span>💮</span> 칭찬 도장 찍기
+        </button>
+      </div>
+    </section>
+
+    <!-- Sangyun View: Mom's Praise Stamp Display -->
+    <section id="praise-stamp-card" class="hidden rounded-2xl p-5 border-2 border-dashed border-rose-300 bg-rose-50/70 shadow-sm flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-2xl shadow-md">
+          💮
+        </div>
+        <div>
+          <span class="text-xs font-bold text-rose-600">엄마의 확인 완료 도장</span>
+          <p id="praise-stamp-msg" class="text-sm font-extrabold text-slate-800 mt-0.5">"상윤아 오늘도 정말 꼼꼼하게 잘 해냈어! 최고야!"</p>
+          <span id="praise-stamp-time" class="text-[11px] text-slate-400"></span>
+        </div>
+      </div>
+      <span class="text-xs px-2.5 py-1 bg-rose-200 text-rose-800 font-bold rounded-lg flex-shrink-0">확인완료</span>
+    </section>
+
+    <section class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <span>📚</span> 오늘 할 과제 목록
+          <span id="task-count-badge" class="text-xs px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold">0</span>
+        </h3>
+        
+        <!-- Mom only Controls: Copy Yesterday & Add Task -->
+        <div id="mom-task-controls" class="hidden flex items-center gap-2">
+          <button onclick="copyYesterdayTasks()" class="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 active:scale-95 text-amber-900 text-xs font-bold rounded-xl border border-amber-300 transition flex items-center gap-1 shadow-sm" title="어제 진행했던 과제를 가져와서 초기화합니다">
+            <span>📥</span> 어제 과제 불러오기
+          </button>
+          <button id="btn-add-task" onclick="openAddTaskModal()" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1">
+            <span>➕</span> 새 과제 추가
+          </button>
+        </div>
+      </div>
+
+      <!-- Task items container -->
+      <div id="tasks-container" class="space-y-3">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 text-center py-10 text-slate-400">
+          <div class="inline-block w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mb-2"></div>
+          <p class="text-sm">학습 목록을 불러오는 중입니다...</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">💬</span>
+          <h3 class="text-sm font-bold text-slate-800">상윤이의 오늘 학습 소감 & 보고</h3>
+        </div>
+        <span id="message-time" class="text-xs text-slate-400 font-medium"></span>
+      </div>
+
+      <div id="sangyun-reflection-form" class="space-y-3">
+        <textarea id="sangyun-message-input" rows="3" placeholder="엄마에게 오늘 공부하며 느낀 점이나 질문을 남겨보세요. (예: 수학 3번 서술형 단계별로 잘 적었습니다! 과학 용어도 암기 완료!)" class="w-full text-sm p-3.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 leading-relaxed"></textarea>
+        
+        <!-- Direct Submit Button -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+          <p class="text-xs text-slate-500">
+            💡 과제를 다 체크하고 아래 버튼을 누르면 <strong>김해 엄마 화면으로 즉시 완료 보고가 전송</strong>됩니다.
+          </p>
+          <button id="btn-submit-to-mom" onclick="submitToMomDirectly()" class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-indigo-600 via-indigo-700 to-emerald-600 hover:from-indigo-700 hover:to-emerald-700 text-white text-sm font-extrabold rounded-xl shadow-lg transition active:scale-95 flex items-center justify-center gap-2">
+            <span>🚀</span> 엄마에게 오늘 과제 제출하기
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-indigo-50/60 rounded-2xl p-4 border border-indigo-100 text-xs text-indigo-900 leading-relaxed flex items-start gap-3">
+      <span class="text-lg">💡</span>
+      <div>
+        <p class="font-bold mb-1">김해(엄마) ↔ 마산(상윤이) 사용 방법</p>
+        <p class="text-indigo-700">
+          • <strong>상윤이</strong>: 번호 순서대로 과제를 해결하고 네모 박스를 클릭한 후, 맨 아래 <strong>[엄마에게 오늘 과제 제출하기]</strong>를 누르면 끝!<br>
+          • <strong>엄마</strong>: 상단 우측 <strong>[엄마 모드]</strong>로 바꾸면 새 과제를 등록하거나 공지 문구를 수정할 수 있습니다.
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal: Add / Edit Task -->
+  <div id="task-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-200">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 id="task-modal-title" class="text-base font-bold text-slate-800">새 학습 과제 추가</h3>
+        <button onclick="closeTaskModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+      <input type="hidden" id="modal-task-id">
+      
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">과제 제목 (필수)</label>
+          <input type="text" id="modal-task-text" placeholder="예: 과학 서술형 꼼꼼하게 글씨 또박또박 써서 풀기" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">상세 안내 / 누나의 꿀팁 (선택)</label>
+          <textarea id="modal-task-detail" rows="3" placeholder="예: 수학은 누나가 알려준 서술형 쓰기로 단계별로 쓰기, 글씨 깨끗하게!" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t">
+        <button onclick="closeTaskModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">취소</button>
+        <button onclick="saveTaskModal()" class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition">저장하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Edit Mom Notice -->
+  <div id="notice-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-200">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="text-base font-bold text-slate-800">엄마의 공지 & 응원 문구 수정</h3>
+        <button onclick="closeNoticeModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">D-Day 또는 강조 태그</label>
+          <input type="text" id="modal-dday-input" placeholder="예: 🔥 D-7 집중 기간!" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">공지 및 격려 메시지</label>
+          <textarea id="modal-notice-input" rows="4" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t">
+        <button onclick="closeNoticeModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">취소</button>
+        <button onclick="saveNoticeModal()" class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition">적용하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Popup -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2">
+    <span id="toast-icon">✨</span>
+    <span id="toast-message">알림</span>
+  </div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+  import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+  import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+  // App & Firebase Configuration
+  const appId = typeof __app_id !== 'undefined' ? __app_id : 'yuny-study';
+  const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+    apiKey: "dummy-key",
+    authDomain: "dummy.firebaseapp.com",
+    projectId: "dummy-project"
+  };
+
+  let app, auth, db;
+  try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+  } catch (e) {
+    console.warn("Firebase initialize skipped, fallback to local mode:", e);
+  }
+
+  // App State
+  let currentUser = null;
+  let currentRole = 'sangyun'; // 'sangyun' or 'mom'
+  let selectedDate = getFormattedToday();
+  let currentDayData = null;
+  let unsubscribeDoc = null;
+
+  // Helper: Format Date YYYY-MM-DD
+  function getFormattedToday() {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  // 9월 6일 요청 기본 데이터 (최초 1회만 제공)
+  function getSept6Preset() {
+    return {
+      date: "2026-09-06",
+      tag: "🔥 D-7 집중 기간!",
+      notice: "이제 일주일 남았어요. 서술형 쓰기에 집중합시다!\n오늘도 글씨 또박또박, 단계별 풀이 잊지 마세요.",
+      sangyunMessage: "",
+      sangyunMessageTime: "",
+      isSubmitted: false,
+      submittedAt: null,
+      momPraise: null,
+      tasks: [
+        {
+          id: "task-1",
+          text: "컴퓨터 학습 각 2회씩 풀기",
+          detail: "집중해서 오답 없이 2회씩 완료하기",
+          completed: false,
+          completedAt: null
+        },
+        {
+          id: "task-2",
+          text: "과학 서술형 꼼꼼하게 글씨 또박또박 써서 풀기",
+          detail: "원리와 용어를 정확히 넣고, 글씨를 알아보기 쉽게 단정히 쓰기",
+          completed: false,
+          completedAt: null
+        },
+        {
+          id: "task-3",
+          text: "수학, 영어, 국어 메일로 보낸 거 풀기",
+          detail: "수학은 누나가 알려준 서술형 쓰기로 단계별로 쓰기! 글씨 깨끗하게!",
+          completed: false,
+          completedAt: null
+        },
+        {
+          id: "task-4",
+          text: "서술형은 모두 그날 바로 확인하고 다시 쓰기 연습하기",
+          detail: "틀린 문제나 부족한 풀이는 그 자리에서 즉시 다시 작성해보기",
+          completed: false,
+          completedAt: null
+        }
+      ],
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  // 빈 날짜용 기본 양식
+  function getEmptyDayPreset(dateStr) {
+    return {
+      date: dateStr,
+      tag: "📅 학습 안내",
+      notice: "오늘의 과제를 확인하고 차근차근 해결해봅시다.",
+      sangyunMessage: "",
+      sangyunMessageTime: "",
+      isSubmitted: false,
+      submittedAt: null,
+      momPraise: null,
+      tasks: [], // 과제 없음 (빈 상태)
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  // Init Authentication
+  async function initAuth() {
+    try {
+      if (auth) {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          const credential = await signInWithCustomToken(auth, __initial_auth_token);
+          currentUser = credential.user;
+        } else {
+          const credential = await signInAnonymously(auth);
+          currentUser = credential.user;
+        }
+        document.getElementById('sync-status').textContent = '김해 ↔ 마산 실시간 연결됨';
+        loadDayData(selectedDate);
+        return;
+      }
+    } catch (err) {
+      console.warn('Firebase Auth fallback:', err);
+    }
+    
+    // Fallback mode
+    document.getElementById('sync-status').textContent = '유니-스터디 활성화됨';
+    useFallbackLocal(selectedDate);
+  }
+
+  // Load Data for date
+  function loadDayData(dateStr) {
+    if (unsubscribeDoc) {
+      unsubscribeDoc();
+    }
+
+    if (!currentUser || !db) {
+      useFallbackLocal(dateStr);
+      return;
+    }
+
+    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_checklists', dateStr);
+
+    unsubscribeDoc = onSnapshot(docRef, (snap) => {
+      if (snap.exists()) {
+        currentDayData = snap.data();
+      } else {
+        // 2026-09-06만 최초 기본 프리셋 부여, 그 외 모든 날짜는 빈 양식
+        const initial = (dateStr === "2026-09-06") ? getSept6Preset() : getEmptyDayPreset(dateStr);
+        setDoc(docRef, initial).catch(e => console.error("Error setting initial doc:", e));
+        currentDayData = initial;
+      }
+      renderUI();
+    }, (error) => {
+      console.warn("Firestore snapshot error, fallback to local:", error);
+      useFallbackLocal(dateStr);
+    });
+  }
+
+  // Fallback storage
+  function useFallbackLocal(dateStr) {
+    try {
+      const stored = window.sessionStorage.getItem(`yuny_${dateStr}`);
+      if (stored) {
+        currentDayData = JSON.parse(stored);
+      } else {
+        currentDayData = (dateStr === "2026-09-06") ? getSept6Preset() : getEmptyDayPreset(dateStr);
+      }
+    } catch (e) {
+      currentDayData = (dateStr === "2026-09-06") ? getSept6Preset() : getEmptyDayPreset(dateStr);
+    }
+    renderUI();
+  }
+
+  // Persist Data
+  async function persistData() {
+    if (!currentDayData) return;
+    currentDayData.updatedAt = new Date().toISOString();
+
+    try {
+      window.sessionStorage.setItem(`yuny_${currentDayData.date}`, JSON.stringify(currentDayData));
+    } catch (e) {}
+
+    if (currentUser && db) {
+      try {
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_checklists', currentDayData.date);
+        await setDoc(docRef, currentDayData);
+      } catch (err) {
+        console.error("Save error:", err);
+      }
+    }
+    renderUI();
+  }
+
+  function renderUI() {
+    if (!currentDayData) return;
+
+    // 1. Date Input
+    const dateInput = document.getElementById('current-date-input');
+    if (dateInput && dateInput.value !== currentDayData.date) {
+      dateInput.value = currentDayData.date;
+    }
+
+    // 2. Banner
+    document.getElementById('d-day-tag').textContent = currentDayData.tag || "🔥 D-7 집중 기간!";
+    document.getElementById('mom-notice-text').textContent = currentDayData.notice || "오늘도 파이팅!";
+
+    // 3. Task Progress
+    const tasks = currentDayData.tasks || [];
+    const totalCount = tasks.length;
+    const completedCount = tasks.filter(t => t.completed).length;
+    const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+    document.getElementById('task-count-badge').textContent = `${completedCount}/${totalCount}`;
+    document.getElementById('progress-percent').textContent = `${percent}%`;
+    document.getElementById('progress-bar').style.width = `${percent}%`;
+    
+    const progressTextEl = document.getElementById('progress-text');
+    if (percent === 100 && totalCount > 0) {
+      progressTextEl.textContent = "🎉 대단해 상윤아! 오늘의 모든 과제를 완료했습니다!";
+      progressTextEl.className = "text-xs font-bold text-emerald-600";
+    } else if (percent >= 50) {
+      progressTextEl.textContent = `절반 넘게 해냈어요! (${completedCount}개 완료, 끝까지 집중!)`;
+      progressTextEl.className = "text-xs text-indigo-600 font-semibold";
+    } else {
+      progressTextEl.textContent = `총 ${totalCount}개 과제 중 ${completedCount}개 완료됨`;
+      progressTextEl.className = "text-xs text-slate-500";
+    }
+
+    // 4. Tasks List
+    const container = document.getElementById('tasks-container');
+    if (tasks.length === 0) {
+      container.innerHTML = `
+        <div class="bg-white p-8 rounded-2xl border border-dashed border-slate-300 text-center text-slate-400">
+          <p class="text-3xl mb-2">☕</p>
+          <p class="text-sm font-semibold text-slate-600">등록된 학습 과제가 없습니다.</p>
+          ${currentRole === 'mom' ? `
+            <div class="mt-3 flex items-center justify-center gap-2">
+              <button onclick="copyYesterdayTasks()" class="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold rounded-xl border border-amber-300 transition flex items-center gap-1">
+                <span>📥</span> 어제 과제 불러오기
+              </button>
+              <button onclick="openAddTaskModal()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1">
+                <span>➕</span> 새 과제 등록하기
+              </button>
+            </div>
+          ` : `
+            <p class="text-xs text-slate-400 mt-1">오늘은 과제가 없거나, 엄마가 학습 내용을 작성 중입니다.</p>
+          `}
+        </div>
+      `;
+    } else {
+      container.innerHTML = tasks.map((task, index) => {
+        const isDone = task.completed;
+        return `
+          <div class="group bg-white rounded-2xl p-4 border transition-all duration-200 shadow-sm hover:shadow ${isDone ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200'} flex items-start gap-3.5">
+            <button onclick="toggleTask('${task.id}')" class="mt-0.5 w-7 h-7 rounded-xl flex-shrink-0 flex items-center justify-center transition-all ${isDone ? 'bg-emerald-500 text-white shadow-emerald-200 shadow-md' : 'border-2 border-slate-300 hover:border-indigo-400 bg-white'} custom-checkbox">
+              ${isDone ? `
+                <svg class="w-4 h-4 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+              ` : `
+                <span class="text-xs text-slate-300 font-bold group-hover:text-indigo-400">${index + 1}</span>
+              `}
+            </button>
+
+            <div class="flex-1 min-w-0" onclick="toggleTask('${task.id}')" style="cursor: pointer;">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-sm font-bold ${isDone ? 'line-through text-slate-400' : 'text-slate-800'}">
+                  ${index + 1}. ${escapeHtml(task.text)}
+                </span>
+                ${isDone && task.completedAt ? `<span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-medium">${task.completedAt} 완료</span>` : ''}
+              </div>
+              ${task.detail ? `
+                <div class="mt-1 text-xs ${isDone ? 'text-slate-400 line-through' : 'text-slate-600'} bg-slate-50 border border-slate-100 rounded-lg p-2.5 leading-relaxed">
+                  <span class="text-indigo-600 font-semibold">📌 안내:</span> ${escapeHtml(task.detail)}
+                </div>
+              ` : ''}
+            </div>
+
+            ${currentRole === 'mom' ? `
+              <div class="flex items-center gap-1 flex-shrink-0 pt-0.5">
+                <button onclick="editTask('${task.id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition" title="수정">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </button>
+                <button onclick="deleteTask('${task.id}')" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 rounded-lg transition" title="삭제">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 5. Sangyun Message Display
+    const msgInput = document.getElementById('sangyun-message-input');
+    const msgTimeEl = document.getElementById('message-time');
+    
+    if (document.activeElement !== msgInput) {
+      msgInput.value = currentDayData.sangyunMessage || '';
+    }
+    if (currentDayData.sangyunMessageTime) {
+      msgTimeEl.textContent = `최근 작성: ${currentDayData.sangyunMessageTime}`;
+    } else {
+      msgTimeEl.textContent = '';
+    }
+
+    // 6. Submission status & Praise stamp displays
+    const isMom = currentRole === 'mom';
+    const alertCard = document.getElementById('mom-submission-alert');
+    const praiseCard = document.getElementById('praise-stamp-card');
+    const submitBtn = document.getElementById('btn-submit-to-mom');
+
+    if (isMom && currentDayData.isSubmitted) {
+      alertCard.classList.remove('hidden');
+      document.getElementById('alert-submitted-time').textContent = `${currentDayData.submittedAt} 제출`;
+      document.getElementById('alert-submitted-summary').textContent = `상윤이가 과제를 완료하고 제출했습니다! (소감: "${currentDayData.sangyunMessage || '성실하게 완료했습니다!'}")`;
+    } else {
+      alertCard.classList.add('hidden');
+    }
+
+    if (currentDayData.momPraise) {
+      praiseCard.classList.remove('hidden');
+      document.getElementById('praise-stamp-msg').textContent = `"${currentDayData.momPraise.text}"`;
+      document.getElementById('praise-stamp-time').textContent = `엄마가 ${currentDayData.momPraise.stampedAt}에 도장을 찍어주셨어요!`;
+    } else {
+      praiseCard.classList.add('hidden');
+    }
+
+    if (currentDayData.isSubmitted) {
+      submitBtn.classList.remove('from-indigo-600', 'to-emerald-600');
+      submitBtn.classList.add('from-emerald-600', 'to-teal-700');
+      submitBtn.innerHTML = `<span>✅</span> 엄마에게 제출 완료 (${currentDayData.submittedAt})`;
+    } else {
+      submitBtn.innerHTML = `<span>🚀</span> 엄마에게 오늘 과제 제출하기`;
+    }
+
+    // 7. Role controls
+    document.getElementById('mom-task-controls').classList.toggle('hidden', !isMom);
+    document.getElementById('mom-notice-edit-btn').classList.toggle('hidden', !isMom);
+  }
+
+  // [기능 추가] 어제 과제 불러오기
+  window.copyYesterdayTasks = async function() {
+    if (!currentDayData) return;
+
+    // 어제 날짜 계산
+    const [y, m, d] = currentDayData.date.split('-').map(Number);
+    const prevDateObj = new Date(y, m - 1, d);
+    prevDateObj.setDate(prevDateObj.getDate() - 1);
+    const prevY = prevDateObj.getFullYear();
+    const prevM = String(prevDateObj.getMonth() + 1).padStart(2, '0');
+    const prevD = String(prevDateObj.getDate()).padStart(2, '0');
+    const prevDateStr = `${prevY}-${prevM}-${prevD}`;
+
+    let prevTasks = null;
+    let prevTag = null;
+    let prevNotice = null;
+
+    // 1. Session Storage 조회 시도
+    try {
+      const stored = window.sessionStorage.getItem(`yuny_${prevDateStr}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        prevTasks = parsed.tasks;
+        prevTag = parsed.tag;
+        prevNotice = parsed.notice;
+      }
+    } catch (e) {}
+
+    // 2. 어제가 9월 6일이었던 경우 기본 프리셋 참조
+    if ((!prevTasks || prevTasks.length === 0) && prevDateStr === "2026-09-06") {
+      const preset = getSept6Preset();
+      prevTasks = preset.tasks;
+      prevTag = preset.tag;
+      prevNotice = preset.notice;
+    }
+
+    if (!prevTasks || prevTasks.length === 0) {
+      showToast(`어제(${prevDateStr})에 등록된 과제가 없습니다.`, "⚠️");
+      return;
+    }
+
+    // 과제 복사 (체크박스는 모두 미완료 상태로 새롭게 초기화)
+    currentDayData.tasks = prevTasks.map((t, idx) => ({
+      id: "task-" + Date.now() + "-" + idx,
+      text: t.text,
+      detail: t.detail || "",
+      completed: false,
+      completedAt: null
+    }));
+
+    if (prevTag && currentDayData.tag === "📅 학습 안내") {
+      currentDayData.tag = prevTag;
+    }
+    if (prevNotice && currentDayData.notice === "오늘의 과제를 확인하고 차근차근 해결해봅시다.") {
+      currentDayData.notice = prevNotice;
+    }
+
+    await persistData();
+    showToast(`어제(${prevDateStr})의 과제 ${currentDayData.tasks.length}개를 가져왔습니다!`, "📥");
+  };
+
+  window.submitToMomDirectly = async function() {
+    if (!currentDayData) return;
+
+    const tasks = currentDayData.tasks || [];
+    const completedCount = tasks.filter(t => t.completed).length;
+    const msg = document.getElementById('sangyun-message-input').value.trim();
+    currentDayData.sangyunMessage = msg;
+
+    const now = new Date();
+    const timeString = `${now.getHours()}시 ${String(now.getMinutes()).padStart(2, '0')}분`;
+    currentDayData.sangyunMessageTime = timeString;
+    currentDayData.isSubmitted = true;
+    currentDayData.submittedAt = timeString;
+
+    await persistData();
+
+    if (typeof confetti === 'function') {
+      confetti({
+        particleCount: 120,
+        spread: 90,
+        origin: { y: 0.5 }
+      });
+    }
+
+    showToast(`김해 엄마에게 성공적으로 제출되었습니다! (${completedCount}/${tasks.length} 완료) 🚀`, "💌");
+  };
+
+  window.stampPraise = async function() {
+    if (!currentDayData) return;
+
+    const now = new Date();
+    const timeString = `${now.getHours()}시 ${String(now.getMinutes()).padStart(2, '0')}분`;
+
+    currentDayData.momPraise = {
+      text: "상윤아 오늘도 약속대로 차근차근 잘 끝냈네! 아주 기특해, 최고야! 💯",
+      stampedAt: timeString
+    };
+
+    await persistData();
+
+    if (typeof confetti === 'function') {
+      confetti({
+        particleCount: 100,
+        spread: 80,
+        origin: { y: 0.4 }
+      });
+    }
+
+    showToast("상윤이에게 칭찬 도장 쾅! 찍어주었습니다. 💮", "👏");
+  };
+
+  window.toggleTask = async function(taskId) {
+    if (!currentDayData || !currentDayData.tasks) return;
+    
+    const task = currentDayData.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    task.completed = !task.completed;
+    if (task.completed) {
+      const now = new Date();
+      const timeString = `${now.getHours()}시 ${String(now.getMinutes()).padStart(2, '0')}분`;
+      task.completedAt = timeString;
+      showToast(`'${task.text.substring(0, 16)}...' 완료! 👏`, "✅");
+
+      const allDone = currentDayData.tasks.every(t => t.completed);
+      if (allDone && typeof confetti === 'function') {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      }
+    } else {
+      task.completedAt = null;
+      showToast("과제 완료 취소됨", "↩️");
+    }
+
+    await persistData();
+  };
+
+  window.switchRole = function(role) {
+    currentRole = role;
+    const btnSangyun = document.getElementById('btn-mode-sangyun');
+    const btnMom = document.getElementById('btn-mode-mom');
+
+    if (role === 'sangyun') {
+      btnSangyun.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm bg-white text-indigo-700";
+      btnMom.className = "px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 transition-all flex items-center gap-1.5";
+      showToast("상윤이 모드로 전환되었습니다. 🧑‍🎓", "💡");
+    } else {
+      btnMom.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm bg-white text-indigo-700";
+      btnSangyun.className = "px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 transition-all flex items-center gap-1.5";
+      showToast("엄마 모드로 전환되었습니다. 과제를 수정할 수 있습니다. 👩‍👧", "💡");
+    }
+    renderUI();
+  };
+
+  window.changeDate = function(offsetDays) {
+    const [y, m, d] = selectedDate.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    dateObj.setDate(dateObj.getDate() + offsetDays);
+
+    const newYear = dateObj.getFullYear();
+    const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const newDay = String(dateObj.getDate()).padStart(2, '0');
+    selectedDate = `${newYear}-${newMonth}-${newDay}`;
+
+    loadDayData(selectedDate);
+  };
+
+  window.onDateInputChange = function(newDateVal) {
+    if (!newDateVal) return;
+    selectedDate = newDateVal;
+    loadDayData(selectedDate);
+  };
+
+  window.setToday = function() {
+    selectedDate = getFormattedToday();
+    loadDayData(selectedDate);
+  };
+
+  window.openAddTaskModal = function() {
+    document.getElementById('task-modal-title').textContent = "새 학습 과제 추가";
+    document.getElementById('modal-task-id').value = "";
+    document.getElementById('modal-task-text').value = "";
+    document.getElementById('modal-task-detail').value = "";
+    document.getElementById('task-modal').classList.remove('hidden');
+    document.getElementById('modal-task-text').focus();
+  };
+
+  window.editTask = function(taskId) {
+    if (!currentDayData || !currentDayData.tasks) return;
+    const task = currentDayData.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    document.getElementById('task-modal-title').textContent = "과제 수정하기";
+    document.getElementById('modal-task-id').value = task.id;
+    document.getElementById('modal-task-text').value = task.text;
+    document.getElementById('modal-task-detail').value = task.detail || "";
+    document.getElementById('task-modal').classList.remove('hidden');
+  };
+
+  window.closeTaskModal = function() {
+    document.getElementById('task-modal').classList.add('hidden');
+  };
+
+  window.saveTaskModal = async function() {
+    const text = document.getElementById('modal-task-text').value.trim();
+    const detail = document.getElementById('modal-task-detail').value.trim();
+    const id = document.getElementById('modal-task-id').value;
+
+    if (!text) {
+      showToast("과제 제목을 입력해주세요.", "⚠️");
+      return;
+    }
+
+    if (!currentDayData.tasks) currentDayData.tasks = [];
+
+    if (id) {
+      const task = currentDayData.tasks.find(t => t.id === id);
+      if (task) {
+        task.text = text;
+        task.detail = detail;
+      }
+    } else {
+      currentDayData.tasks.push({
+        id: "task-" + Date.now(),
+        text: text,
+        detail: detail,
+        completed: false,
+        completedAt: null
+      });
+    }
+
+    closeTaskModal();
+    await persistData();
+    showToast("과제가 성공적으로 저장되었습니다.", "✅");
+  };
+
+  window.deleteTask = async function(taskId) {
+    if (!currentDayData || !currentDayData.tasks) return;
+    currentDayData.tasks = currentDayData.tasks.filter(t => t.id !== taskId);
+    await persistData();
+    showToast("과제가 삭제되었습니다.", "🗑️");
+  };
+
+  window.openEditNoticeModal = function() {
+    document.getElementById('modal-dday-input').value = currentDayData.tag || "";
+    document.getElementById('modal-notice-input').value = currentDayData.notice || "";
+    document.getElementById('notice-modal').classList.remove('hidden');
+  };
+
+  window.closeNoticeModal = function() {
+    document.getElementById('notice-modal').classList.add('hidden');
+  };
+
+  window.saveNoticeModal = async function() {
+    const tag = document.getElementById('modal-dday-input').value.trim();
+    const notice = document.getElementById('modal-notice-input').value.trim();
+
+    currentDayData.tag = tag;
+    currentDayData.notice = notice;
+
+    closeNoticeModal();
+    await persistData();
+    showToast("공지 및 응원 문구가 수정되었습니다.", "📢");
+  };
+
+  window.copySummaryText = function() {
+    if (!currentDayData) return;
+
+    const tasks = currentDayData.tasks || [];
+    const total = tasks.length;
+    const done = tasks.filter(t => t.completed).length;
+    const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+
+    let text = `📅 [${currentDayData.date} 유니 학습 체크 현황]\n`;
+    text += `진행률: ${percent}% (${done}/${total} 완료)\n`;
+    if (currentDayData.tag) text += `📌 ${currentDayData.tag}\n`;
+    text += `-------------------------\n`;
+
+    tasks.forEach((t, i) => {
+      text += `${t.completed ? '✅' : '⬜'} ${i + 1}. ${t.text}`;
+      if (t.completed && t.completedAt) text += ` (${t.completedAt} 완료)`;
+      text += `\n`;
+      if (t.detail) text += `   - ${t.detail}\n`;
+    });
+
+    if (currentDayData.sangyunMessage) {
+      text += `-------------------------\n`;
+      text += `🧑‍🎓 상윤이의 한 줄 보고:\n"${currentDayData.sangyunMessage}"\n`;
+    }
+
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.opacity = "0";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+      const successful = document.execCommand('copy');
+      if (successful) {
+        showToast("카톡 공유용 요약본이 클립보드에 복사되었습니다! 📋", "🎉");
+      } else {
+        showToast("복사에 실패했습니다.", "⚠️");
+      }
+    } catch (err) {
+      showToast("복사 중 오류가 발생했습니다.", "⚠️");
+    }
+    document.body.removeChild(textArea);
+  };
+
+  function escapeHtml(string) {
+    if (!string) return '';
+    return String(string)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function showToast(message, icon = "✨") {
+    const toast = document.getElementById('toast');
+    const toastMsg = document.getElementById('toast-message');
+    const toastIcon = document.getElementById('toast-icon');
+
+    toastMsg.textContent = message;
+    toastIcon.textContent = icon;
+
+    toast.classList.remove('translate-y-20', 'opacity-0');
+    toast.classList.add('translate-y-0', 'opacity-100');
+
+    setTimeout(() => {
+      toast.classList.remove('translate-y-0', 'opacity-100');
+      toast.classList.add('translate-y-20', 'opacity-0');
+    }, 2800);
+  }
+
+  window.onload = function() {
+    initAuth();
+  };
+</script>
+</body>
+</html>
